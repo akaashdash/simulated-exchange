@@ -1,5 +1,7 @@
 #include "price_level.hpp"
 
+PriceLevel::PriceLevel(): total_quantity_{0} {}
+
 void PriceLevel::Add(std::shared_ptr<Order> order) {
     if (order_locations_.count(order->GetID())) throw std::invalid_argument("Order with ID already exists in the level");
 

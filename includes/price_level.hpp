@@ -7,6 +7,7 @@
 
 class PriceLevel {
 public:
+    PriceLevel();
     void Add(std::shared_ptr<Order> order);
     void Remove(OrderID id);
     bool IsEmpty();

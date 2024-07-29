@@ -7,8 +7,8 @@ Order::Order(OrderID order_id, OrderPrice order_price, OrderQuantity order_quant
     , quantity_(order_quantity)
     , filled_(0)
     , side_(order_side)
-    , type_(order_type) 
-    {
+    , type_(order_type) {
+    if (order_quantity == 0) throw std::invalid_argument("Attempting to create an order with no quantity");
 }
 
 OrderQuantity Order::GetRemaining() {
