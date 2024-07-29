@@ -1,6 +1,8 @@
 #include "order_book.hpp"
 
 bool OrderBook::PlaceOrder(std::shared_ptr<Order> order) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
+    // maybe return false instead?
     if (orders_.count(order->GetID())) throw std::invalid_argument("Order with ID already exists in the book");
 
     // Fail if not possible to fill FoK
@@ -22,6 +24,7 @@ bool OrderBook::PlaceOrder(std::shared_ptr<Order> order) {
 }
 
 bool OrderBook::CancelOrder(OrderID id) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     // maybe return false instead?
     if (!orders_.count(id)) throw std::invalid_argument("Order with ID does not exist in the book");
 
@@ -38,18 +41,23 @@ bool OrderBook::CancelOrder(OrderID id) {
 }
 
 bool OrderBook::CanFill(std::shared_ptr<Order> order) {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     Quantity available = 0;
     if (order->GetSide() == OrderSide::ASK) {
-        for (auto it = best_bids_.begin(); 
+        for (
+            auto it = best_bids_.begin(); 
             it != best_bids_.end() && *it >= order->GetPrice(); 
-            ++it) {
+            ++it
+        ) {
             available += bids_[*it].GetTotalQuantity();
             if (available >= order->GetRemaining()) return true;
         }
     } else {
-        for (auto it = best_asks_.begin(); 
+        for (
+            auto it = best_asks_.begin(); 
             it != best_asks_.end() && *it <= order->GetPrice(); 
-            ++it) {
+            ++it
+        ) {
             available += asks_[*it].GetTotalQuantity();
             if (available >= order->GetRemaining()) return true;
         }
@@ -58,10 +66,14 @@ bool OrderBook::CanFill(std::shared_ptr<Order> order) {
 }
 
 void OrderBook::Fill(std::shared_ptr<Order> order) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (order->GetSide() == OrderSide::ASK) {
-        for (auto it = best_bids_.begin(); 
-            it != best_bids_.end() && *it >= order->GetPrice() && !order->IsFilled(); 
-            ) {
+        auto it = best_bids_.begin(); 
+        while (
+            it != best_bids_.end() && 
+            *it >= order->GetPrice() && 
+            !order->IsFilled()
+        ) {
             bids_[*it].Fill(order);
             if (bids_[*it].IsEmpty()) {
                 bids_.erase(*it);
@@ -71,9 +83,12 @@ void OrderBook::Fill(std::shared_ptr<Order> order) {
             }
         }
     } else {
-        for (auto it = best_asks_.begin(); 
-            it != best_asks_.end() && *it <= order->GetPrice() && !order->IsFilled(); 
-            ) {
+        auto it = best_asks_.begin(); 
+        while (
+            it != best_asks_.end() && 
+            *it <= order->GetPrice() && 
+            !order->IsFilled()
+        ) {
             asks_[*it].Fill(order);
             if (asks_[*it].IsEmpty()) {
                 asks_.erase(*it);

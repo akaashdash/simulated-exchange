@@ -5,6 +5,7 @@
 #include <list>
 #include <set>
 #include <any>
+#include <shared_mutex>
 
 #include "order.hpp"
 #include "price_level.hpp"
@@ -16,6 +17,7 @@ public:
     bool CanFill(std::shared_ptr<Order> order);
     void Fill(std::shared_ptr<Order> order);
 private:
+    mutable std::shared_mutex mutex_;
     std::unordered_map<OrderPrice, PriceLevel> asks_;
     std::unordered_map<OrderPrice, PriceLevel> bids_;
     std::unordered_map<OrderID, std::tuple<OrderSide, OrderPrice>> orders_;
