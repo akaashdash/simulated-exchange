@@ -1,35 +1,86 @@
 #include "order_book.hpp"
 
-bool OrderBook::PlaceOrder(OrderID id, Price price, Quantity quantity, OrderSide side, OrderType type) {
-    if (orders_.count(id)) return false;
-    if (type) throw std::invalid_argument("Market orders are not yet implemented");
-    if (side) {
-        asks_[price].emplace_back(id, price, quantity, side, type);
-        orders_[id] = {side, price, std::prev(asks_[price].end())};
-        best_asks_.insert(price);
-    } else {
-        bids_[price].emplace_back(id, price, quantity, side, type);
-        orders_[id] = {side, price, std::prev(bids_[price].end())};
-        best_bids_.insert(price);
-    }
+bool OrderBook::PlaceOrder(std::shared_ptr<Order> order) {
+    if (orders_.count(order->GetID())) throw std::invalid_argument("Order with ID already exists in the book");
+
+    // Fail if not possible to fill FoK
+    if (order->GetType() == OrderType::FILL_OR_KILL && !CanFill(order)) return false; 
+    // Fill as much as we can
+    Fill(order);
+    // Kill FoK/IoC, don't add to book
+    if (order->GetType() == OrderType::FILL_OR_KILL || order->GetType() == OrderType::IMMEDIATE_OR_CANCEL) return true;
+    // Order is already filled, don't add to book
+    if (order->IsFilled()) return true;
+
+    // Add to book
+    std::unordered_map<OrderPrice, PriceLevel>& book = (order->GetSide() == OrderSide::ASK) ? asks_ : bids_;
+    book[order->GetPrice()].Add(order);
+    orders_[order->GetID()] = {order->GetSide(), order->GetPrice()};
+    if (order->GetSide() == OrderSide::ASK) best_asks_.insert(order->GetPrice());
+    else best_bids_.insert(order->GetPrice());
     return true;
 }
 
 bool OrderBook::CancelOrder(OrderID id) {
-    if (!orders_.count(id)) return false;
-    if (std::get<0>(orders_[id])) {
-        asks_[std::get<1>(orders_[id])].erase(std::get<2>(orders_[id]));
-        if (asks_[std::get<1>(orders_[id])].empty()) {
-            asks_.erase(std::get<1>(orders_[id]));
-            best_asks_.erase(std::get<1>(orders_[id]));
-        }
-    } else {
-        bids_[std::get<1>(orders_[id])].erase(std::get<2>(orders_[id]));
-        if (bids_[std::get<1>(orders_[id])].empty()) {
-            bids_.erase(std::get<1>(orders_[id]));
-            best_bids_.erase(std::get<1>(orders_[id]));
-        }
+    // maybe return false instead?
+    if (!orders_.count(id)) throw std::invalid_argument("Order with ID does not exist in the book");
+
+    const auto& [side, price] = orders_[id];
+    std::unordered_map<OrderPrice, PriceLevel>& book = (side == OrderSide::ASK) ? asks_ : bids_;
+    book[price].Remove(id);
+    if (book[price].IsEmpty()) {
+        book.erase(price);
+        if (side == OrderSide::ASK) best_asks_.erase(price);
+        else best_bids_.erase(price);
     }
     orders_.erase(id);
     return true;
+}
+
+bool OrderBook::CanFill(std::shared_ptr<Order> order) {
+    Quantity available = 0;
+    if (order->GetSide() == OrderSide::ASK) {
+        for (auto it = best_bids_.begin(); 
+            it != best_bids_.end() && *it >= order->GetPrice(); 
+            ++it) {
+            available += bids_[*it].GetTotalQuantity();
+            if (available >= order->GetRemaining()) return true;
+        }
+    } else {
+        for (auto it = best_asks_.begin(); 
+            it != best_asks_.end() && *it <= order->GetPrice(); 
+            ++it) {
+            available += asks_[*it].GetTotalQuantity();
+            if (available >= order->GetRemaining()) return true;
+        }
+    }
+    return available >= order->GetRemaining();
+}
+
+void OrderBook::Fill(std::shared_ptr<Order> order) {
+    if (order->GetSide() == OrderSide::ASK) {
+        for (auto it = best_bids_.begin(); 
+            it != best_bids_.end() && *it >= order->GetPrice() && !order->IsFilled(); 
+            ) {
+            bids_[*it].Fill(order);
+            if (bids_[*it].IsEmpty()) {
+                bids_.erase(*it);
+                it = best_bids_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    } else {
+        for (auto it = best_asks_.begin(); 
+            it != best_asks_.end() && *it <= order->GetPrice() && !order->IsFilled(); 
+            ) {
+            asks_[*it].Fill(order);
+            if (asks_[*it].IsEmpty()) {
+                asks_.erase(*it);
+                it = best_asks_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 }

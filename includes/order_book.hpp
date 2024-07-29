@@ -4,20 +4,23 @@
 #include <unordered_map>
 #include <list>
 #include <set>
+#include <any>
 
 #include "order.hpp"
+#include "price_level.hpp"
 
 class OrderBook {
 public:
-    OrderBook();
-    bool PlaceOrder(OrderID order_id, Price order_price, Quantity order_quantity, OrderSide order_side, OrderType order_type);
+    bool PlaceOrder(std::shared_ptr<Order> order);
     bool CancelOrder(OrderID order);
+    bool CanFill(std::shared_ptr<Order> order);
+    void Fill(std::shared_ptr<Order> order);
 private:
-    std::unordered_map<Price, std::list<Order>> asks_;
-    std::unordered_map<Price, std::list<Order>> bids_;
-    std::unordered_map<OrderID, std::tuple<OrderSide, Price, std::list<Order>::iterator>> orders_;
-    std::set<Price> best_asks_;
-    std::set<Price> best_bids_;
+    std::unordered_map<OrderPrice, PriceLevel> asks_;
+    std::unordered_map<OrderPrice, PriceLevel> bids_;
+    std::unordered_map<OrderID, std::tuple<OrderSide, OrderPrice>> orders_;
+    std::set<OrderPrice, std::less<OrderPrice>> best_asks_;
+    std::set<OrderPrice, std::greater<OrderPrice>> best_bids_;
 };
 
 #endif

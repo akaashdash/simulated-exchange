@@ -7,24 +7,29 @@
 #include "order_type.hpp"
 #include "utils.hpp"
 
-struct Order {
+class Order {
+public:
     Order() = delete;
-    Order(OrderID order_id, Price order_price, Quantity order_quantity, OrderSide order_side, OrderType order_type)
-        : id(order_id)
-        , price(order_price)
-        , quantity(order_quantity)
-        , side(order_side)
-        , type(order_type)
-    {
-        timestamp = CurrentTime();
-    }
+    Order(OrderID order_id, OrderPrice order_price, OrderQuantity order_quantity, OrderSide order_side, OrderType order_type);
+    OrderQuantity GetRemaining();
+    void Fill(OrderQuantity amount);
+    bool IsFilled();
 
-    OrderID id;
-    Timestamp timestamp;
-    Price price;
-    Quantity quantity;
-    OrderSide side;
-    OrderType type;
+    Timestamp GetCreatedAt();
+    OrderID GetID();
+    OrderPrice GetPrice();
+    OrderQuantity GetQuantity();
+    OrderQuantity GetFilled();
+    OrderSide GetSide();
+    OrderType GetType();
+private:
+    Timestamp created_at_;
+    OrderID id_;
+    OrderPrice price_;
+    OrderQuantity quantity_;
+    OrderQuantity filled_;
+    OrderSide side_;
+    OrderType type_;
 };
 
 #endif

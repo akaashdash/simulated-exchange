@@ -2,8 +2,9 @@
 #define ORDER_TYPE_HPP
 
 enum OrderType {
-    LIMIT,
-    MARKET
+    GOOD_TIL_CANCELED,
+    FILL_OR_KILL,
+    IMMEDIATE_OR_CANCEL
 };
 
 #endif
