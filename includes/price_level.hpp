@@ -2,6 +2,7 @@
 #define PRICE_LEVEL_HPP
 
 #include <list>
+#include <shared_mutex>
 
 #include "order.hpp"
 
@@ -16,6 +17,7 @@ public:
 
     Quantity GetTotalQuantity();
 private:
+    mutable std::shared_mutex mutex_;
     std::list<std::shared_ptr<Order>> orders_;
     std::unordered_map<OrderID, std::list<std::shared_ptr<Order>>::iterator> order_locations_;
     Quantity total_quantity_;

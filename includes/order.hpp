@@ -2,6 +2,7 @@
 #define ORDER_HPP
 
 #include <cstdint>
+#include <shared_mutex>
 
 #include "order_side.hpp"
 #include "order_type.hpp"
@@ -23,6 +24,7 @@ public:
     OrderSide GetSide();
     OrderType GetType();
 private:
+    mutable std::shared_mutex mutex_;
     Timestamp created_at_;
     OrderID id_;
     OrderPrice price_;

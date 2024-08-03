@@ -3,6 +3,7 @@
 PriceLevel::PriceLevel(): total_quantity_{0} {}
 
 void PriceLevel::Add(std::shared_ptr<Order> order) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (order_locations_.count(order->GetID())) throw std::invalid_argument("Order with ID already exists in the level");
 
     orders_.push_back(order);
@@ -11,6 +12,7 @@ void PriceLevel::Add(std::shared_ptr<Order> order) {
 }
 
 void PriceLevel::Remove(OrderID id) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (!order_locations_.count(id)) throw std::invalid_argument("Order with ID does not exist in the level");
 
     total_quantity_ -= (*order_locations_[id])->GetRemaining();
@@ -19,14 +21,17 @@ void PriceLevel::Remove(OrderID id) {
 }
 
 bool PriceLevel::IsEmpty() {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return orders_.empty();
 }
 
 bool PriceLevel::CanFill(OrderQuantity amount) {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return amount <= total_quantity_;
 }
 
 void PriceLevel::Fill(std::shared_ptr<Order> order) {
+    std::unique_lock<std::shared_mutex> lock(mutex_);
     while (!order->IsFilled() && !IsEmpty()) {
         std::shared_ptr<Order> top = orders_.front();
         OrderQuantity fill_amount = std::min(order->GetRemaining(), top->GetRemaining());
@@ -38,5 +43,6 @@ void PriceLevel::Fill(std::shared_ptr<Order> order) {
 }
 
 Quantity PriceLevel::GetTotalQuantity() {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return total_quantity_;
 }
