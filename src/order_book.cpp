@@ -17,6 +17,8 @@ bool OrderBook::PlaceOrder(std::shared_ptr<Order> order) {
     std::unordered_map<OrderPrice, PriceLevel>& book = (order->GetSide() == OrderSide::ASK) ? asks_ : bids_;
     book[order->GetPrice()].Add(order);
     orders_[order->GetID()] = {order->GetSide(), order->GetPrice()};
+    
+    // these are both currently O(logn) operations, need to optimize
     if (order->GetSide() == OrderSide::ASK) best_asks_.insert(order->GetPrice());
     else best_bids_.insert(order->GetPrice());
     return true;
@@ -31,6 +33,7 @@ bool OrderBook::CancelOrder(OrderID id) {
     book[price].Remove(id);
     if (book[price].IsEmpty()) {
         book.erase(price);
+        // these are both currently O(logn) operations, need to optimize
         if (side == OrderSide::ASK) best_asks_.erase(price);
         else best_bids_.erase(price);
     }
@@ -73,6 +76,7 @@ void OrderBook::Fill(std::shared_ptr<Order> order) {
             bids_[*it].Fill(order);
             if (bids_[*it].IsEmpty()) {
                 bids_.erase(*it);
+                // O(logn) operation, need to optimize
                 it = best_bids_.erase(it);
             } else {
                 ++it;
@@ -88,6 +92,7 @@ void OrderBook::Fill(std::shared_ptr<Order> order) {
             asks_[*it].Fill(order);
             if (asks_[*it].IsEmpty()) {
                 asks_.erase(*it);
+                // O(logn) operation, need to optimize
                 it = best_asks_.erase(it);
             } else {
                 ++it;
