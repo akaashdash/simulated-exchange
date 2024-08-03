@@ -12,7 +12,9 @@ class Order {
 public:
     Order() = delete;
     Order(OrderID order_id, OrderPrice order_price, OrderQuantity order_quantity, OrderSide order_side, OrderType order_type);
+
     OrderQuantity GetRemaining();
+    // need some way to protect this so it can only be called in PriceLevel
     void Fill(OrderQuantity amount);
     bool IsFilled();
 
@@ -24,7 +26,6 @@ public:
     OrderSide GetSide();
     OrderType GetType();
 private:
-    mutable std::shared_mutex mutex_;
     Timestamp created_at_;
     OrderID id_;
     OrderPrice price_;

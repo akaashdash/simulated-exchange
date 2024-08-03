@@ -9,6 +9,7 @@
 class PriceLevel {
 public:
     PriceLevel();
+
     void Add(std::shared_ptr<Order> order);
     void Remove(OrderID id);
     bool IsEmpty();
@@ -17,7 +18,6 @@ public:
 
     Quantity GetTotalQuantity();
 private:
-    mutable std::shared_mutex mutex_;
     std::list<std::shared_ptr<Order>> orders_;
     std::unordered_map<OrderID, std::list<std::shared_ptr<Order>>::iterator> order_locations_;
     Quantity total_quantity_;

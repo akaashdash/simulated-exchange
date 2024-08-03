@@ -1,7 +1,6 @@
 #include "order_book.hpp"
 
 bool OrderBook::PlaceOrder(std::shared_ptr<Order> order) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
     // maybe return false instead?
     if (orders_.count(order->GetID())) throw std::invalid_argument("Order with ID already exists in the book");
 
@@ -24,7 +23,6 @@ bool OrderBook::PlaceOrder(std::shared_ptr<Order> order) {
 }
 
 bool OrderBook::CancelOrder(OrderID id) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
     // maybe return false instead?
     if (!orders_.count(id)) throw std::invalid_argument("Order with ID does not exist in the book");
 
@@ -41,7 +39,6 @@ bool OrderBook::CancelOrder(OrderID id) {
 }
 
 bool OrderBook::CanFill(std::shared_ptr<Order> order) {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
     Quantity available = 0;
     if (order->GetSide() == OrderSide::ASK) {
         for (
@@ -66,7 +63,6 @@ bool OrderBook::CanFill(std::shared_ptr<Order> order) {
 }
 
 void OrderBook::Fill(std::shared_ptr<Order> order) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
     if (order->GetSide() == OrderSide::ASK) {
         auto it = best_bids_.begin(); 
         while (
