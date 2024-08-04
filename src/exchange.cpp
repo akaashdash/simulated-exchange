@@ -168,6 +168,15 @@ void Exchange::SendNewOrderAck(int client_sock, std::shared_ptr<Order>& order) {
     writer.push_back_string(hffix::tag::OrdStatus, "0");
     writer.push_back_string(hffix::tag::Symbol, order->GetTicker());
     writer.push_back_char(hffix::tag::Side, order->GetSide() == OrderSide::BID ? '1' : '2');
+
+    char order_type;
+    if (order->GetType() == OrderType::FILL_OR_KILL) order_type = '3';
+    else if (order->GetType()  == OrderType::GOOD_TIL_CANCELED) order_type = '1';
+    else if (order->GetType()  == OrderType::IMMEDIATE_OR_CANCEL) order_type = '4';
+    else return; // can never reach here
+    writer.push_back_char(hffix::tag::OrdType, order_type);
+
+    writer.push_back_char(hffix::tag::OrdType, order_type);
     writer.push_back_int(hffix::tag::OrderQty, order->GetQuantity());
     writer.push_back_int(hffix::tag::Price, order->GetPrice());
     writer.push_back_trailer();
@@ -247,6 +256,14 @@ void Exchange::SendOrderStatus(int client_sock, std::shared_ptr<Order>& order) {
 
     writer.push_back_string(hffix::tag::Symbol, order->GetTicker());
     writer.push_back_char(hffix::tag::Side, order->GetSide() == OrderSide::BID ? '1' : '2');
+
+    char order_type;
+    if (order->GetType() == OrderType::FILL_OR_KILL) order_type = '3';
+    else if (order->GetType()  == OrderType::GOOD_TIL_CANCELED) order_type = '1';
+    else if (order->GetType()  == OrderType::IMMEDIATE_OR_CANCEL) order_type = '4';
+    else return; // can never reach here
+    writer.push_back_char(hffix::tag::OrdType, order_type);
+    
     writer.push_back_int(hffix::tag::OrderQty, order->GetQuantity());
     writer.push_back_int(hffix::tag::CumQty, order->GetFilled());
     writer.push_back_int(hffix::tag::LeavesQty, order->GetRemaining());
