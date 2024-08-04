@@ -1,0 +1,3 @@
+[submodule "lib/hffix"]
+	path = lib/hffix
+	url = https://github.com/jamesdbrock/hffix.git
