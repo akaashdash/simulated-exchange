@@ -37,6 +37,7 @@ bool OrderBook::CancelOrder(OrderID id) {
         if (side == OrderSide::ASK) best_asks_.erase(price);
         else best_bids_.erase(price);
     }
+    // currently setting order cancel status in exchange, maybe set here?
     orders_.erase(id);
     return true;
 }
