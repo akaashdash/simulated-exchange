@@ -202,7 +202,7 @@ std::optional<Order> Client::GetOrderStatus(OrderID id) {
 
     }
     
-    Order order(id, ticker, price, quantity, side, type );
+    Order order(id, ticker, price, quantity, side, type);
     order.Fill(filled);
     if (status != OrderStatus::OPEN) order.SetStatus(status);
     return order;

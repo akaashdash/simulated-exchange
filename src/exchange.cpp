@@ -36,7 +36,7 @@ void Exchange::Start(int port) {
 
     while (running_) {
         int client_sock = accept(server_sock, (struct sockaddr*)nullptr, nullptr);
-        if (client_sock != -1) std::thread(HandleClient, client_sock).detach();
+        if (client_sock != -1) std::thread(&Exchange::HandleClient, this, client_sock).detach();
     }
 
     close(server_sock);
