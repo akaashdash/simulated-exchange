@@ -1,5 +1,5 @@
 CXX=clang++
-INCLUDES=-Iincludes/
+INCLUDES=-Iincludes/ -Ilib/hffix/include/
 CXXFLAGS=-std=c++20 -g -fstandalone-debug -Wall -Wextra -Werror -pedantic $(INCLUDES)
 
 exec: bin/exec
