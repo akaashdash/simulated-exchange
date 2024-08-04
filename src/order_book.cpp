@@ -67,6 +67,7 @@ bool OrderBook::CanFill(std::shared_ptr<Order> order) {
 }
 
 void OrderBook::Fill(std::shared_ptr<Order> order) {
+    // Maybe combine with CanFill to avoid repeated code
     if (order->GetSide() == OrderSide::ASK) {
         auto it = best_bids_.begin(); 
         while (

@@ -188,6 +188,7 @@ void Exchange::ProcessCancelOrder(hffix::message_reader& reader, int client_sock
     if (!exists) return SendRejection(client_sock, "Invalid order ID");
 
     std::unique_lock<std::shared_mutex> lock(mutex_);
+    // validate that order is cancelable right before cancelling
     bool success = order_books_[orders_[id]->GetTicker()]->CancelOrder(id);
     if (success) orders_[id]->SetStatus(OrderStatus::CANCELLED);
     lock.unlock();
@@ -252,6 +253,20 @@ void Exchange::SendOrderStatus(int client_sock, std::shared_ptr<Order>& order) {
     writer.push_back_int(hffix::tag::Price, order->GetPrice());
     writer.push_back_trailer();
     read_lock.unlock();
+
+    send(client_sock, response, writer.message_end() - response, 0);
+}
+
+
+void Exchange::SendRejection(int client_sock, std::string reason) {
+    char response[BUFFER_SIZE];
+    hffix::message_writer writer(response, response + BUFFER_SIZE);
+    writer.push_back_header("FIX.4.2");
+    writer.push_back_string(hffix::tag::MsgType, "3");
+    writer.push_back_string(hffix::tag::SenderCompID, "SERVER");
+    writer.push_back_string(hffix::tag::TargetCompID, "CLIENT");
+    writer.push_back_string(hffix::tag::Text, reason);
+    writer.push_back_trailer();
 
     send(client_sock, response, writer.message_end() - response, 0);
 }
