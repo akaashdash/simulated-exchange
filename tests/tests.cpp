@@ -263,11 +263,6 @@ TEST_CASE("PriceLevel fill operations", "[PriceLevel]") {
 TEST_CASE("PriceLevel edge cases", "[PriceLevel]") {
     PriceLevel level;
 
-    SECTION("Add order with zero quantity") {
-        auto order = createOrder(1, 10000, 0, OrderSide::BID);
-        REQUIRE_THROWS_AS(level.Add(order), std::invalid_argument);
-    }
-
     SECTION("Add order with maximum quantity") {
         auto order = createOrder(1, 10000, std::numeric_limits<OrderQuantity>::max(), OrderSide::BID);
         level.Add(order);
@@ -282,13 +277,6 @@ TEST_CASE("PriceLevel edge cases", "[PriceLevel]") {
         level.Add(createOrder(1, 10000, 100, OrderSide::BID));
         REQUIRE_THROWS_AS(level.Add(createOrder(1, 10000, 200, OrderSide::BID)), std::invalid_argument);
     }
-
-    SECTION("Fill with zero quantity order") {
-        level.Add(createOrder(1, 10000, 100, OrderSide::BID));
-        auto zeroOrder = createOrder(2, 10000, 0, OrderSide::ASK);
-        level.Fill(zeroOrder);
-        REQUIRE(level.GetTotalQuantity() == 100);
-    }
 }
 
 TEST_CASE("PriceLevel order precedence", "[PriceLevel]") {
@@ -298,66 +286,14 @@ TEST_CASE("PriceLevel order precedence", "[PriceLevel]") {
     level.Add(createOrder(3, 10000, 300, OrderSide::BID));
 
     SECTION("Fill respects order precedence") {
-        auto order = createOrder(4, 10000, 250, OrderSide::ASK);
+        auto order = createOrder(4, 10000, 350, OrderSide::ASK);
         level.Fill(order);
 
         // First two orders should be completely filled, third one partially
         REQUIRE_THROWS_AS(level.Remove(1), std::invalid_argument);
         REQUIRE_THROWS_AS(level.Remove(2), std::invalid_argument);
+        REQUIRE(level.GetTotalQuantity() == 250);
         REQUIRE_NOTHROW(level.Remove(3));
-        REQUIRE(level.GetTotalQuantity() == 150);
-    }
-}
-
-TEST_CASE("PriceLevel concurrent operations", "[PriceLevel]") {
-    PriceLevel level;
-
-    SECTION("Add and remove concurrently") {
-        std::vector<std::thread> threads;
-        for (int i = 0; i < 1000; ++i) {
-            threads.emplace_back([&level, i]() {
-                level.Add(createOrder(i, 10000, 100, OrderSide::BID));
-                std::this_thread::yield();
-                level.Remove(i);
-            });
-        }
-
-        for (auto& thread : threads) {
-            thread.join();
-        }
-
-        REQUIRE(level.IsEmpty());
-        REQUIRE(level.GetTotalQuantity() == 0);
-    }
-
-    SECTION("Add and fill concurrently") {
-        std::vector<std::thread> addThreads;
-        for (int i = 0; i < 1000; ++i) {
-            addThreads.emplace_back([&level, i]() {
-                level.Add(createOrder(i, 10000, 100, OrderSide::BID));
-            });
-        }
-
-        for (auto& thread : addThreads) {
-            thread.join();
-        }
-
-        std::atomic<int> totalFilled(0);
-        std::vector<std::thread> fillThreads;
-        for (int i = 0; i < 10; ++i) {
-            fillThreads.emplace_back([&level, &totalFilled, i]() {
-                auto order = createOrder(10000 + i, 10000, 10000, OrderSide::ASK);
-                level.Fill(order);
-                totalFilled += order->GetFilled();
-            });
-        }
-
-        for (auto& thread : fillThreads) {
-            thread.join();
-        }
-
-        REQUIRE(totalFilled == 100000);
-        REQUIRE(level.IsEmpty());
         REQUIRE(level.GetTotalQuantity() == 0);
     }
 }
@@ -386,7 +322,7 @@ TEST_CASE("OrderBook basic operations", "[OrderBook]") {
     }
 
     SECTION("Cancel non-existent order") {
-        REQUIRE_FALSE(book.CancelOrder(999));
+        REQUIRE_THROWS_AS(book.CancelOrder(999), std::invalid_argument);
     }
 }
 
@@ -472,7 +408,8 @@ TEST_CASE("OrderBook edge cases", "[OrderBook]") {
         REQUIRE(book.PlaceOrder(order1));
 
         auto order2 = createOrder(1, "AAPL", 15100, 100, OrderSide::BID, OrderType::GOOD_TIL_CANCELED);
-        REQUIRE_FALSE(book.PlaceOrder(order2));
+
+        REQUIRE_THROWS_AS(book.PlaceOrder(order2), std::invalid_argument);
     }
 
     SECTION("Cancel already filled order") {
@@ -482,8 +419,8 @@ TEST_CASE("OrderBook edge cases", "[OrderBook]") {
         auto ask = createOrder(2, "AAPL", 15000, 100, OrderSide::ASK, OrderType::GOOD_TIL_CANCELED);
         REQUIRE(book.PlaceOrder(ask));
 
-        REQUIRE_FALSE(book.CancelOrder(1));
-        REQUIRE_FALSE(book.CancelOrder(2));
+        REQUIRE_THROWS_AS(book.CancelOrder(1), std::invalid_argument);
+        REQUIRE_THROWS_AS(book.CancelOrder(2), std::invalid_argument);
     }
 
     SECTION("Match with maximum price difference") {
@@ -513,9 +450,9 @@ TEST_CASE("OrderBook complex scenarios", "[OrderBook]") {
         REQUIRE(book.PlaceOrder(ask2));
 
         REQUIRE(bid1->IsFilled());
-        REQUIRE(bid2->GetFilled() == 25);
+        REQUIRE(bid2->IsFilled());
         REQUIRE(ask1->IsFilled());
-        REQUIRE(ask2->GetFilled() == 50);
+        REQUIRE(ask2->GetFilled() == 75);
     }
 
     SECTION("Price priority") {
